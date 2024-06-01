@@ -1,42 +1,19 @@
-namespace CacheService;
-using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
-public class CachingHttpClient(HttpMessageHandler handler, IMemoryCache cache, ILogger<CachingHttpClient> logger)
-    : HttpClient(handler)
+namespace CacheService
 {
-    public override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    public class CachingHttpClient(HttpMessageHandler handler, IMemoryCache cache, ILogger<CachingHttpClient> logger)
+        : HttpClient(handler)
     {
-        var cacheKey = request.RequestUri?.ToString() ?? string.Empty;
-
-        if (cache.TryGetValue(cacheKey, out CachedHttpResponse? cachedResponse))
+        public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            logger.LogInformation("Cache hit for {Url}", cacheKey);
-            // if cached response is null, then exit if block to continue fetching from server
-            if (cachedResponse == null) 
-            {
-                logger.LogWarning("Cached response is null for {Url}. Fetching from server...", cacheKey);
-            }
-            else
-            {
-                return cachedResponse.ToHttpResponseMessage();
-            }
+            return CachingHelper.GetResponseWithCachingAsync(
+                request,
+                cache,
+                logger,
+                base.SendAsync,
+                cancellationToken);
         }
-
-        logger.LogInformation("Cache miss for {Url}. Fetching from server...", cacheKey);
-        var response = await base.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode) return response;
-
-        var responseClone = await CachedHttpResponse.FromHttpResponseMessageAsync(response);
-        cache.Set(cacheKey, responseClone, new MemoryCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        });
-
-        return responseClone.ToHttpResponseMessage();
     }
 }

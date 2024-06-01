@@ -5,12 +5,12 @@ namespace CacheService;
 public class CachedHttpResponse
 {
     public HttpStatusCode StatusCode { get; set; }
-    public string ReasonPhrase { get; set; }
-    public HttpRequestMessage RequestMessage { get; set; }
-    public Version Version { get; set; }
-    public Dictionary<string, IEnumerable<string>> Headers { get; set; }
-    public Dictionary<string, IEnumerable<string>> ContentHeaders { get; set; }
-    public byte[] Content { get; set; }
+    public string? ReasonPhrase { get; set; }
+    public HttpRequestMessage? RequestMessage { get; set; }
+    public Version? Version { get; set; }
+    public Dictionary<string, IEnumerable<string>> Headers { get; set; } = new();
+    public Dictionary<string, IEnumerable<string>> ContentHeaders { get; set; } = new();
+    public byte[] Content { get; set; } = Array.Empty<byte>();
 
     public static async Task<CachedHttpResponse> FromHttpResponseMessageAsync(HttpResponseMessage response)
     {
