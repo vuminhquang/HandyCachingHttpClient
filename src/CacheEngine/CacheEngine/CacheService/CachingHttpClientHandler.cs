@@ -1,22 +1,11 @@
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace CacheService
 {
-    public class CachingHttpClientHandler : DelegatingHandler
+    public class CachingHttpClientHandler(IMemoryCache cache, ILogger<CachingHttpClientHandler> logger)
+        : DelegatingHandler
     {
-        private readonly IMemoryCache cache;
-        private readonly ILogger<CachingHttpClientHandler> logger;
-
-        public CachingHttpClientHandler(IMemoryCache cache, ILogger<CachingHttpClientHandler> logger)
-        {
-            this.cache = cache;
-            this.logger = logger;
-        }
-
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var cacheKey = request.RequestUri?.ToString() ?? string.Empty;
