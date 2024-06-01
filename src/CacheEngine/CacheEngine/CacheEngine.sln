@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CacheService", "CacheService\CacheService.csproj", "{BC8D3511-71E0-49D4-92F1-B720F58D19A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CacheService.Tests", "CacheService.Tests\CacheService.Tests.csproj", "{FE893E8F-40D2-4EAC-A5CC-7F53AD848028}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CacheService.RefitTests", "CacheService.RefitTests\CacheService.RefitTests.csproj", "{138CCF62-E4C4-4E72-84A3-895DD47554BE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC8D3511-71E0-49D4-92F1-B720F58D19A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC8D3511-71E0-49D4-92F1-B720F58D19A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC8D3511-71E0-49D4-92F1-B720F58D19A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC8D3511-71E0-49D4-92F1-B720F58D19A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE893E8F-40D2-4EAC-A5CC-7F53AD848028}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE893E8F-40D2-4EAC-A5CC-7F53AD848028}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE893E8F-40D2-4EAC-A5CC-7F53AD848028}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE893E8F-40D2-4EAC-A5CC-7F53AD848028}.Release|Any CPU.Build.0 = Release|Any CPU
+		{138CCF62-E4C4-4E72-84A3-895DD47554BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{138CCF62-E4C4-4E72-84A3-895DD47554BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{138CCF62-E4C4-4E72-84A3-895DD47554BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{138CCF62-E4C4-4E72-84A3-895DD47554BE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
