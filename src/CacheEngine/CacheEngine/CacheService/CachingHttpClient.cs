@@ -11,46 +11,32 @@ public class CachingHttpClient(HttpMessageHandler handler, IMemoryCache cache, I
 {
     public override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var cacheKey = request.RequestUri.ToString();
-        if (cache.TryGetValue(cacheKey, out HttpResponseMessage cachedResponse))
+        var cacheKey = request.RequestUri?.ToString() ?? string.Empty;
+
+        if (cache.TryGetValue(cacheKey, out CachedHttpResponse? cachedResponse))
         {
             logger.LogInformation("Cache hit for {Url}", cacheKey);
-            return CloneHttpResponseMessage(cachedResponse);
+            // if cached response is null, then exit if block to continue fetching from server
+            if (cachedResponse == null) 
+            {
+                logger.LogWarning("Cached response is null for {Url}. Fetching from server...", cacheKey);
+            }
+            else
+            {
+                return cachedResponse.ToHttpResponseMessage();
+            }
         }
 
         logger.LogInformation("Cache miss for {Url}. Fetching from server...", cacheKey);
         var response = await base.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode) return response;
-        // Clone the response before caching it
-        var responseClone = CloneHttpResponseMessage(response);
+
+        var responseClone = await CachedHttpResponse.FromHttpResponseMessageAsync(response);
         cache.Set(cacheKey, responseClone, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
         });
-        return responseClone;
 
-    }
-
-    private HttpResponseMessage CloneHttpResponseMessage(HttpResponseMessage response)
-    {
-        var clone = new HttpResponseMessage(response.StatusCode)
-        {
-            Content = response.Content,
-            ReasonPhrase = response.ReasonPhrase,
-            RequestMessage = response.RequestMessage,
-            Version = response.Version
-        };
-
-        foreach (var header in response.Headers)
-        {
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        foreach (var header in response.Content.Headers)
-        {
-            clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        return clone;
+        return responseClone.ToHttpResponseMessage();
     }
 }
