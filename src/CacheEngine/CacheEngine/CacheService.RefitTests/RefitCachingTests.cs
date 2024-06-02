@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Refit;
@@ -30,12 +32,22 @@ public class RefitCachingTests : IDisposable
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddMemoryCache();
         serviceCollection.AddLogging();
+        
+        // Add configuration for cache expiration
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "CacheExpirationMinutes", "5" } // or any other value you need
+            })
+            .Build();
+        serviceCollection.AddSingleton<IConfiguration>(configuration);
+        
         var serviceProvider = serviceCollection.BuildServiceProvider();
         memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
         logger = serviceProvider.GetRequiredService<ILogger<CachingHttpClientHandler>>();
 
         // Configure HttpClient with CachingHttpClientHandler
-        var handler = new CachingHttpClientHandler(memoryCache, logger)
+        var handler = new CachingHttpClientHandler(memoryCache, logger, configuration)
         {
             InnerHandler = new HttpClientHandler()
         };

@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using System;
+using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Moq.Protected;
 
@@ -19,6 +21,7 @@ public class CachingHttpClientTests
     private readonly IMemoryCache _cache;
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
     private readonly ILogger<CachingHttpClient> _logger;
+    private readonly IConfiguration _config;
 
     public CachingHttpClientTests()
     {
@@ -27,8 +30,20 @@ public class CachingHttpClientTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        
+        // Add configuration for cache expiration
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "CacheExpirationMinutes", "1" } // or any other value you need
+            })
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        
         var serviceProvider = services.BuildServiceProvider();
         _logger = serviceProvider.GetRequiredService<ILogger<CachingHttpClient>>();
+        
+        _config = serviceProvider.GetRequiredService<IConfiguration>();
     }
 
     [Fact]
@@ -48,7 +63,7 @@ public class CachingHttpClientTests
             .ReturnsAsync(CreateResponseMessage())
             .ReturnsAsync(CreateResponseMessage());
 
-        using var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger);
+        using var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger, _config);
         using var normalHttpClient = new HttpClient(_httpMessageHandlerMock.Object);
 
         // Act
@@ -115,7 +130,7 @@ public class CachingHttpClientTests
             .ReturnsAsync(initialHttpResponseMessage)
             .ReturnsAsync(updatedHttpResponseMessage);
 
-        var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger);
+        var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger, _config);
 
         // Act
         var request1 = new HttpRequestMessage(HttpMethod.Get, url);
@@ -123,7 +138,7 @@ public class CachingHttpClientTests
         var content1 = await response1.Content.ReadAsStringAsync();
 
         // Wait for cache expiration (adjust the delay based on your cache expiration settings)
-        await Task.Delay(TimeSpan.FromMinutes(6));
+        await Task.Delay(TimeSpan.FromMinutes(2));
 
         var request2 = new HttpRequestMessage(HttpMethod.Get, url);
         var response2 = await cachingHttpClient.SendAsync(request2, CancellationToken.None);
@@ -145,7 +160,7 @@ public class CachingHttpClientTests
     public async Task SendAsync_ShouldNotCacheErrorResponse()
     {
         // Arrange
-        string url = "https://api.example.com/data";
+        var url = "https://api.example.com/data";
         var errorHttpResponseMessage = new HttpResponseMessage
         {
             StatusCode = HttpStatusCode.InternalServerError,
@@ -160,7 +175,7 @@ public class CachingHttpClientTests
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(errorHttpResponseMessage);
 
-        var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger);
+        var cachingHttpClient = new CachingHttpClient(_httpMessageHandlerMock.Object, _cache, _logger, _config);
 
         // Act
         var request1 = new HttpRequestMessage(HttpMethod.Get, url);

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CacheService;
@@ -9,6 +10,7 @@ public static class CachingHelper
         HttpRequestMessage request,
         IMemoryCache cache,
         ILogger logger,
+        IConfiguration configuration,
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendRequest,
         CancellationToken cancellationToken)
     {
@@ -31,10 +33,14 @@ public static class CachingHelper
 
         var response = await sendRequest(request, cancellationToken);
         if (!response.IsSuccessStatusCode) return response;
+
         var responseClone = await CachedHttpResponse.FromHttpResponseMessageAsync(response);
+
+        // Read the cache expiration from configuration
+        var cacheExpirationMinutes = configuration.GetValue<int>("CacheExpirationMinutes", 5);
         cache.Set(cacheKey, responseClone, new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(cacheExpirationMinutes)
         });
 
         return response;
