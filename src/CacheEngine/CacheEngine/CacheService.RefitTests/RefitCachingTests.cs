@@ -16,16 +16,15 @@ namespace CacheService.RefitTests;
 
 public class RefitCachingTests : IDisposable
 {
-    private readonly WireMockServer server;
-    private readonly ITestApi testApi;
-    private readonly IMemoryCache memoryCache;
-    private readonly ILogger<CachingHttpClientHandler> logger;
+    private readonly WireMockServer _server;
+    private readonly ITestApi _testApi;
+    private readonly SessionStatistics _sessionStatistics;
 
     public RefitCachingTests()
     {
         // Set up WireMock server
-        server = WireMockServer.Start();
-        server.Given(Request.Create().WithPath("/data").UsingGet())
+        _server = WireMockServer.Start();
+        _server.Given(Request.Create().WithPath("/data").UsingGet())
               .RespondWith(Response.Create().WithStatusCode(200).WithBody("Mocked response"));
 
         // Set up Dependency Injection
@@ -43,45 +42,51 @@ public class RefitCachingTests : IDisposable
         serviceCollection.AddSingleton<IConfiguration>(configuration);
         
         var serviceProvider = serviceCollection.BuildServiceProvider();
-        memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
-        logger = serviceProvider.GetRequiredService<ILogger<CachingHttpClientHandler>>();
+        var memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
+        var logger = serviceProvider.GetRequiredService<ILogger<CachingHttpClientHandler>>();
 
+        _sessionStatistics = new();
+        
         // Configure HttpClient with CachingHttpClientHandler
-        var handler = new CachingHttpClientHandler(memoryCache, logger, configuration)
+        var handler = new CachingHttpClientHandler(memoryCache, logger, configuration, _sessionStatistics)
         {
             InnerHandler = new HttpClientHandler()
         };
 
         var httpClient = new HttpClient(handler)
         {
-            BaseAddress = new Uri(server.Url)
+            BaseAddress = new Uri(_server.Url)
         };
 
         // Create Refit client
-        testApi = RestService.For<ITestApi>(httpClient);
+        _testApi = RestService.For<ITestApi>(httpClient);
     }
 
     [Fact]
     public async Task GetDataAsync_ShouldReturnCachedResponse()
     {
         // Act - First request should hit the server
-        var response1 = await testApi.GetDataAsync();
+        var response1 = await _testApi.GetDataAsync();
 
         // Assert - Check first response
         Assert.Equal("Mocked response", response1);
-        Assert.Single(server.LogEntries);
+        Assert.Single(_server.LogEntries);
 
         // Act - Second request should come from cache
-        var response2 = await testApi.GetDataAsync();
+        var response2 = await _testApi.GetDataAsync();
 
         // Assert - Check second response
         Assert.Equal("Mocked response", response2);
-        Assert.Single(server.LogEntries); // No new server log entry, indicating it's cached
+        Assert.Single(_server.LogEntries); // No new server log entry, indicating it's cached
+        
+        // Assert - Check session statistics
+        Assert.Equal(1, _sessionStatistics.CacheMisses);
+        Assert.Equal(1, _sessionStatistics.CacheHits);
     }
 
     public void Dispose()
     {
-        server.Stop();
-        server.Dispose();
+        _server.Stop();
+        _server.Dispose();
     }
 }
