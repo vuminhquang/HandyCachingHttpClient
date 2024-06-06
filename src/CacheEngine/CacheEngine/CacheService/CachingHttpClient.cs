@@ -4,18 +4,36 @@ using Microsoft.Extensions.Logging;
 
 namespace CacheService
 {
-    public class CachingHttpClient(HttpMessageHandler handler, IMemoryCache cache, ILogger<CachingHttpClient> logger, IConfiguration configuration)
-        : HttpClient(handler)
+    public class CachingHttpClient : HttpClient
     {
-        public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        private readonly IMemoryCache _cache;
+        private readonly ILogger<CachingHttpClient> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly SessionStatistics? _sessionStatistics;
+
+        public CachingHttpClient(HttpMessageHandler handler, IMemoryCache cache, ILogger<CachingHttpClient> logger, IConfiguration configuration, SessionStatistics? sessionStatistics = null)
+            : base(handler)
         {
-            return CachingHelper.GetResponseWithCachingAsync(
+            _cache = cache;
+            _logger = logger;
+            _configuration = configuration;
+            _sessionStatistics = sessionStatistics;
+        }
+
+        public override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = await CachingHelper.GetResponseWithCachingAsync(
                 request,
-                cache,
-                logger,
-                configuration,
+                _cache,
+                _logger,
+                _configuration,
+                _sessionStatistics,
                 base.SendAsync,
                 cancellationToken);
+
+            _sessionStatistics?.LogSummary(_logger);
+
+            return response;
         }
     }
 }

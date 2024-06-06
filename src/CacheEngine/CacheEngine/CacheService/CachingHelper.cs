@@ -11,6 +11,7 @@ public static class CachingHelper
         IMemoryCache cache,
         ILogger logger,
         IConfiguration configuration,
+        SessionStatistics? sessionStatistics,
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendRequest,
         CancellationToken cancellationToken)
     {
@@ -19,6 +20,11 @@ public static class CachingHelper
         if (cache.TryGetValue(cacheKey, out CachedHttpResponse? cachedResponse))
         {
             logger.LogInformation("Cache hit for {Url}", cacheKey);
+            if (sessionStatistics != null)
+            {
+                sessionStatistics.CacheHits++;
+            }
+
             if (cachedResponse != null)
             {
                 return cachedResponse.ToHttpResponseMessage();
@@ -29,6 +35,10 @@ public static class CachingHelper
         else
         {
             logger.LogInformation("Cache miss for {Url}. Fetching from server...", cacheKey);
+            if (sessionStatistics != null)
+            {
+                sessionStatistics.CacheMisses++;
+            }
         }
 
         var response = await sendRequest(request, cancellationToken);
@@ -42,6 +52,8 @@ public static class CachingHelper
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(cacheExpirationMinutes)
         });
+
+        logger.LogInformation("Added response to cache for {Url}", cacheKey);
 
         return response;
     }
